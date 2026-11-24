@@ -1,0 +1,167 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moon-grib/moon-grib"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn open_archive(Bytes) -> Archive raise GribError
+
+pub fn samples_csv(Array[Sample]) -> String
+
+// Errors
+pub(all) suberror GribError {
+  Invalid(Int32, String)
+  Unsupported(Int32, String)
+}
+
+// Types and methods
+pub struct Archive {
+  bytes : Bytes
+  fields : Array[Field]
+}
+pub fn Archive::decode(Self, Int32) -> DecodedField raise GribError
+pub fn Archive::field(Self, Int32) -> Field raise GribError
+pub fn Archive::field_count(Self) -> Int32
+pub fn Archive::grid(Self, Int32) -> Grid raise GribError
+pub fn Archive::metadata(Self, Int32) -> Metadata raise GribError
+pub fn Archive::select(Self, Filter) -> Array[Metadata] raise GribError
+pub fn Archive::validate(Self, decode_values? : Bool) -> Array[FieldDiagnostic]
+
+pub(all) struct Bounds {
+  west : Double
+  south : Double
+  east : Double
+  north : Double
+}
+
+pub struct DecodedField {
+  bytes : Bytes
+  grid : Grid
+  payload : Int32
+  // private fields
+}
+pub fn DecodedField::at(Self, Int32, Int32) -> Sample raise GribError
+pub fn DecodedField::dimensions(Self) -> (Int32, Int32)
+pub fn DecodedField::statistics(Self, Bounds, max_points? : Int32) -> Statistics raise GribError
+pub fn DecodedField::visit_window(Self, Bounds, (Sample) -> Unit, max_points? : Int32) -> Unit raise GribError
+pub fn DecodedField::window(Self, Bounds, max_points? : Int32) -> Array[Sample] raise GribError
+
+pub(all) struct Field {
+  discipline : Int32
+  message : Span
+  identification : Span
+  grid_definition : Span
+  product_definition : Span
+  representation : Span
+  bitmap : Span
+  data : Span
+  bitmap_source : Span?
+}
+
+pub(all) struct FieldDiagnostic {
+  index : Int32
+  result : FieldStatus
+}
+pub fn FieldDiagnostic::json(Self) -> @json.Json
+
+pub(all) enum FieldStatus {
+  Ready
+  Malformed(Int32, String)
+  UnsupportedField(Int32, String)
+}
+
+pub(all) struct Filter {
+  discipline : Int32?
+  category : Int32?
+  parameter : Int32?
+  centre : Int32?
+  surface_kind : Int32?
+  forecast_unit : Int32?
+  forecast_offset : Int32?
+  reference_time : String?
+}
+pub fn Filter::empty() -> Self
+pub fn Filter::matches(Self, Metadata) -> Bool
+
+pub struct Grid {
+  columns : Int32
+  rows : Int32
+  points : Int32
+  first_latitude : Double
+  first_longitude : Double
+  latitude_step : Double
+  longitude_step : Double
+  column_major : Bool
+  alternating : Bool
+}
+pub fn Grid::latitude(Self, Int32) -> Double
+pub fn Grid::longitude(Self, Int32) -> Double
+
+pub(all) struct Metadata {
+  field_index : Int32
+  origin : ReferenceTime
+  centre : Int32
+  subcentre : Int32
+  variable : Variable
+  product_template : Int32
+  grid_template : Int32
+  packing_template : Int32
+  forecast_unit : Int32?
+  forecast_offset : Int32?
+  first_surface : Surface?
+  second_surface : Surface?
+  message : Span
+}
+pub fn Metadata::json(Self) -> @json.Json
+
+pub(all) struct ReferenceTime {
+  year : Int32
+  month : Int32
+  day : Int32
+  hour : Int32
+  minute : Int32
+  second : Int32
+}
+pub fn ReferenceTime::iso(Self) -> String
+
+pub(all) struct Sample {
+  row : Int32
+  column : Int32
+  latitude : Double
+  longitude : Double
+  value : Double?
+}
+pub fn Sample::json(Self) -> @json.Json
+
+pub(all) struct Span {
+  offset : Int32
+  length : Int32
+}
+
+pub(all) struct Statistics {
+  points : Int32
+  present : Int32
+  missing : Int32
+  minimum : Double?
+  maximum : Double?
+  mean : Double?
+  population_variance : Double?
+}
+pub fn Statistics::json(Self) -> @json.Json
+
+pub(all) struct Surface {
+  kind : Int32
+  value : Double?
+}
+
+pub(all) struct Variable {
+  discipline : Int32
+  category : Int32
+  parameter : Int32
+}
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,46 @@
+[
+  {
+    "grid": [
+      24,
+      24
+    ],
+    "bitmap": false,
+    "packing": "grid_simple",
+    "verified_points": 121,
+    "missing_points": 0,
+    "cli_wall_seconds": 0.1169
+  },
+  {
+    "grid": [
+      200,
+      200
+    ],
+    "bitmap": true,
+    "packing": "grid_simple",
+    "verified_points": 121,
+    "missing_points": 17,
+    "cli_wall_seconds": 0.1168
+  },
+  {
+    "grid": [
+      200,
+      200
+    ],
+    "bitmap": false,
+    "packing": "grid_complex",
+    "verified_points": 121,
+    "missing_points": 0,
+    "cli_wall_seconds": 0.1378
+  },
+  {
+    "grid": [
+      200,
+      200
+    ],
+    "bitmap": false,
+    "packing": "grid_complex_spatial_differencing",
+    "verified_points": 121,
+    "missing_points": 0,
+    "cli_wall_seconds": 0.1245
+  }
+]
