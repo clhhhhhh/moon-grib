@@ -9,7 +9,7 @@
 //   "moonbitlang/x@0.4.6",
 // }
 
-name = "moon-grib/moon-grib"
+name = "clhhhhhh/moon-grib"
 
 version = "0.1.0"
 
@@ -23,4 +23,4 @@ keywords = [ ]
 
 preferred_target = "wasm"
 
-description = ""
+description = "GRIB2 archive decoder and geographic window query library"

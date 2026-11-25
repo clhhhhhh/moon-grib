@@ -1,5 +1,5 @@
 import {
-  "moon-grib/moon-grib" @grib,
+  "clhhhhhh/moon-grib" @grib,
   "moonbitlang/core/env",
   "moonbitlang/core/string",
 }
