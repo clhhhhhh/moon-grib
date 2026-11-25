@@ -45,9 +45,24 @@ python -B examples/benchmark_window.py
 
 | 窗口 | 格点数 | 整场解码后裁剪 | 内存内窗口解码 | 按范围读取 | 范围读取字节 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| 小窗口 | 121 | 181.74 ms | 109.75 ms | 108.82 ms | 1184 |
-| 大窗口 | 40401 | 220.23 ms | 174.01 ms | 214.42 ms | 81744 |
+| 小窗口 | 121 | 191.16 ms | 113.66 ms | 112.43 ms | 1152 |
+| 大窗口 | 40401 | 238.30 ms | 182.57 ms | 202.60 ms | 81712 |
 
 范围读取字节包含从文件读取的消息索引、字段元数据和负载，计时包含 Node.js 启动和 CSV 序列化。大窗口在本机上的范围读取耗时高于内存内窗口路径。
 
 格式说明见 [ECMWF GRIB2 模板](https://codes.ecmwf.int/grib/) 与 [ecCodes 文档](https://sites.ecmwf.int/docs/eccodes/)。许可证为 Apache-2.0。
+
+## Reproducible forecast example
+
+```sh
+moon build --target js
+python -B examples/demo.py ./forecast-demo
+python -B examples/verify_encoded.py
+```
+
+The demo generates two GRIB2 fields for the same forecast, lists the fields,
+extracts a 3-by-2 region and writes a grayscale PGM preview. It checks the
+inventory, the missing cell and the image dimensions. The output directory
+also includes a CSV file and the input GRIB2. The separate ecCodes
+interoperability script checks both encoded messages, including the date
+rollover, grid coordinates, packed values and bitmap.

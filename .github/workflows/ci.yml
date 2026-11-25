@@ -27,3 +27,4 @@ jobs:
       - run: python -m pip install eccodes==2.50.1
       - run: python examples/verify_eccodes.py
       - run: python examples/verify_encoded.py
+      - run: python -B examples/demo.py forecast-demo
