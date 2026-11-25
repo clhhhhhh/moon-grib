@@ -167,8 +167,12 @@ fn packed_requests(
   if width == 0 {
     return requests
   }
+  let mut ordered = true
+  let mut previous = -1
   for position, sample in samples {
     if sample.ordinal is Some(ordinal) {
+      ordered = ordered && ordinal >= previous
+      previous = ordinal
       let bit = ordinal.to_int64() * width.to_int64()
       requests.push({
         position,
@@ -178,7 +182,9 @@ fn packed_requests(
       })
     }
   }
-  requests.sort_by((a, b) => a.start.compare(b.start))
+  if !ordered {
+    requests.sort_by((a, b) => a.ordinal.compare(b.ordinal))
+  }
   requests
 }
 

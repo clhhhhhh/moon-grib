@@ -140,3 +140,25 @@ test "area statistics and resampling distinguish missing points" {
   assert_eq(changed.raster.value(1, 1), Some(2.0))
   assert_eq(changed.raster.value(2, 0), None)
 }
+
+///|
+test "range planning preserves logical order across scanning modes" {
+  for mode in [0, 16, 32, 48, 64, 128, 240] {
+    let bytes = fixture(mode, true)
+    let direct = open_archive(bytes).decode(0)
+    let source = ByteSource::new(bytes.length(), (start, length) => {
+      bytes[start:start + length].to_owned()
+    })
+    let indexed = open_indexed(source).decode(0)
+    let bounds : Bounds = {
+      west: -180.0,
+      east: 180.0,
+      south: -90.0,
+      north: 90.0,
+    }
+    assert_eq(
+      samples_csv(indexed.window(bounds).samples),
+      samples_csv(direct.window(bounds)),
+    )
+  }
+}
