@@ -227,6 +227,14 @@ pub fn RangeField::window(
   if options.merge_gap < 0 || options.max_read < 8 {
     raise Invalid(self.payload, "invalid range read limits")
   }
+  if self.bitmap is None &&
+    !self.grid.column_major &&
+    !self.grid.alternating &&
+    self.packing.width > 0 &&
+    self.packing.width % 8 == 0 {
+    let (rows, columns) = window_ranges(self.grid, bounds, options.max_points)
+    return self.read_rows(rows, columns, options)
+  }
   let selected = range_samples(self, bounds, options.max_points)
   let requests = packed_requests(selected, self.packing.width)
   let batches = plan_reads(requests, options)
