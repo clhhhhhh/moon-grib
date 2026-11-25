@@ -43,6 +43,7 @@ fn ieee_packing(width : Int32, count : Int32) -> Packing {
   {
     reference: 0.0,
     binary_scale: 1.0,
+    binary_exponent: 0,
     decimal_scale: 1.0,
     width: width * 8,
     count,

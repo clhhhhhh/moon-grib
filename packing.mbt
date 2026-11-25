@@ -2,6 +2,7 @@
 priv struct Packing {
   reference : Double
   binary_scale : Double
+  binary_exponent : Int32
   decimal_scale : Double
   width : Int32
   count : Int32
@@ -78,6 +79,7 @@ fn parse_packing_definition(
   {
     reference: ieee_single(unsigned(bytes, at + 11, 4), at + 11),
     binary_scale: pow_int(2.0, binary),
+    binary_exponent: binary,
     decimal_scale: pow_int(10.0, -decimal),
     width,
     count,
@@ -111,8 +113,26 @@ fn decode_value(
   packing : Packing,
   integer : UInt64,
 ) -> Double raise GribError {
-  let value = (packing.reference + integer.to_double() * packing.binary_scale) *
-    packing.decimal_scale
+  let scaled_integer = integer.to_double() * packing.binary_scale
+  let unscaled = packing.reference + scaled_integer
+  let value = if unscaled.is_inf() && integer != 0UL {
+    let decimal = packing.decimal_scale
+    let bits = decimal.reinterpret_as_uint64()
+    let encoded_exponent = ((bits >> 52) & 2047UL).to_int()
+    let exponent = if encoded_exponent == 0 {
+      -1022
+    } else {
+      encoded_exponent - 1023
+    }
+    let mantissa = @math.scalbn(decimal, -exponent)
+    @math.scalbn(
+      integer.to_double() * mantissa,
+      packing.binary_exponent + exponent,
+    ) +
+    packing.reference * decimal
+  } else {
+    unscaled * packing.decimal_scale
+  }
   if value.is_nan() || value.is_inf() {
     raise Unsupported(start, "decoded value exceeds Double range")
   }
