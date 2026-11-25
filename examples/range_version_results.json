@@ -1,0 +1,242 @@
+[
+  {
+    "scenario": "small",
+    "bounds": [
+      8,
+      39,
+      12,
+      42
+    ],
+    "points": 20,
+    "missing": 0,
+    "file_bytes": 130499,
+    "reads": {
+      "current": {
+        "window": {
+          "samples": 20,
+          "payload_reads": 4,
+          "payload_bytes": 40,
+          "decoded_values": 20,
+          "missing_points": 0
+        },
+        "source_reads": 16,
+        "source_bytes": 185
+      },
+      "baseline": {
+        "window": {
+          "samples": 20,
+          "payload_reads": 4,
+          "payload_bytes": 40,
+          "decoded_values": 20,
+          "missing_points": 0
+        },
+        "source_reads": 16,
+        "source_bytes": 185
+      }
+    },
+    "median_wall_ms": {
+      "current": 111.67,
+      "baseline": 120.42
+    }
+  },
+  {
+    "scenario": "large",
+    "bounds": [
+      0,
+      -45,
+      120,
+      45
+    ],
+    "points": 11011,
+    "missing": 0,
+    "file_bytes": 130499,
+    "reads": {
+      "current": {
+        "window": {
+          "samples": 11011,
+          "payload_reads": 91,
+          "payload_bytes": 22022,
+          "decoded_values": 11011,
+          "missing_points": 0
+        },
+        "source_reads": 103,
+        "source_bytes": 22167
+      },
+      "baseline": {
+        "window": {
+          "samples": 11011,
+          "payload_reads": 91,
+          "payload_bytes": 22022,
+          "decoded_values": 11011,
+          "missing_points": 0
+        },
+        "source_reads": 103,
+        "source_bytes": 22167
+      }
+    },
+    "median_wall_ms": {
+      "current": 146.61,
+      "baseline": 141.88
+    }
+  },
+  {
+    "scenario": "date_line",
+    "bounds": [
+      175,
+      -5,
+      -175,
+      5
+    ],
+    "points": 121,
+    "missing": 0,
+    "file_bytes": 130499,
+    "reads": {
+      "current": {
+        "window": {
+          "samples": 121,
+          "payload_reads": 11,
+          "payload_bytes": 242,
+          "decoded_values": 121,
+          "missing_points": 0
+        },
+        "source_reads": 23,
+        "source_bytes": 387
+      },
+      "baseline": {
+        "window": {
+          "samples": 121,
+          "payload_reads": 11,
+          "payload_bytes": 242,
+          "decoded_values": 121,
+          "missing_points": 0
+        },
+        "source_reads": 23,
+        "source_bytes": 387
+      }
+    },
+    "median_wall_ms": {
+      "current": 108.57,
+      "baseline": 109.8
+    }
+  },
+  {
+    "scenario": "bitmap_nonbyte",
+    "bounds": [
+      8,
+      -5,
+      60,
+      10
+    ],
+    "points": 848,
+    "missing": 121,
+    "file_bytes": 85120,
+    "reads": {
+      "current": {
+        "window": {
+          "samples": 848,
+          "payload_reads": 16,
+          "payload_bytes": 1013,
+          "decoded_values": 727,
+          "missing_points": 121
+        },
+        "source_reads": 29,
+        "source_bytes": 9303
+      },
+      "baseline": {
+        "window": {
+          "samples": 848,
+          "payload_reads": 16,
+          "payload_bytes": 1013,
+          "decoded_values": 727,
+          "missing_points": 121
+        },
+        "source_reads": 29,
+        "source_bytes": 9303
+      }
+    },
+    "median_wall_ms": {
+      "current": 120.09,
+      "baseline": 115.1
+    }
+  },
+  {
+    "scenario": "column_major",
+    "bounds": [
+      8,
+      -5,
+      60,
+      10
+    ],
+    "points": 848,
+    "missing": 0,
+    "file_bytes": 130499,
+    "reads": {
+      "current": {
+        "window": {
+          "samples": 848,
+          "payload_reads": 53,
+          "payload_bytes": 1696,
+          "decoded_values": 848,
+          "missing_points": 0
+        },
+        "source_reads": 65,
+        "source_bytes": 1841
+      },
+      "baseline": {
+        "window": {
+          "samples": 848,
+          "payload_reads": 53,
+          "payload_bytes": 1696,
+          "decoded_values": 848,
+          "missing_points": 0
+        },
+        "source_reads": 65,
+        "source_bytes": 1841
+      }
+    },
+    "median_wall_ms": {
+      "current": 115.06,
+      "baseline": 112.96
+    }
+  },
+  {
+    "scenario": "ieee",
+    "bounds": [
+      0,
+      -45,
+      120,
+      45
+    ],
+    "points": 11011,
+    "missing": 0,
+    "file_bytes": 260810,
+    "reads": {
+      "current": {
+        "window": {
+          "samples": 11011,
+          "payload_reads": 91,
+          "payload_bytes": 44044,
+          "decoded_values": 11011,
+          "missing_points": 0
+        },
+        "source_reads": 103,
+        "source_bytes": 44180
+      },
+      "baseline": {
+        "window": {
+          "samples": 11011,
+          "payload_reads": 91,
+          "payload_bytes": 44044,
+          "decoded_values": 11011,
+          "missing_points": 0
+        },
+        "source_reads": 103,
+        "source_bytes": 44180
+      }
+    },
+    "median_wall_ms": {
+      "current": 132.56,
+      "baseline": 144.59
+    }
+  }
+]

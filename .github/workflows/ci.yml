@@ -28,3 +28,4 @@ jobs:
       - run: python examples/verify_eccodes.py
       - run: python examples/verify_encoded.py
       - run: python -B examples/demo.py forecast-demo
+      - run: python -B examples/compare_range_versions.py --runs 1
