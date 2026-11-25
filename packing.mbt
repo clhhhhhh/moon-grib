@@ -41,7 +41,16 @@ fn ieee_single(bits : UInt64, at : Int32) -> Double raise GribError {
 
 ///|
 fn parse_packing(bytes : Bytes, field : Field) -> Packing raise GribError {
-  let at = field.representation.offset
+  parse_packing_definition(bytes, field.representation, field.data.length)
+}
+
+///|
+fn parse_packing_definition(
+  bytes : Bytes,
+  representation : Span,
+  data_length : Int32,
+) -> Packing raise GribError {
+  let at = representation.offset
   let template = u16(bytes, at + 9)
   if template != 0 && template != 2 && template != 3 {
     raise Unsupported(
@@ -49,7 +58,7 @@ fn parse_packing(bytes : Bytes, field : Field) -> Packing raise GribError {
       "unsupported packing template 5." + template.to_string(),
     )
   }
-  if field.representation.length < 21 {
+  if representation.length < 21 {
     raise Invalid(at, "truncated simple packing definition")
   }
   let count = bounded_int(unsigned(bytes, at + 5, 4), at + 5)
@@ -58,12 +67,8 @@ fn parse_packing(bytes : Bytes, field : Field) -> Packing raise GribError {
     raise Unsupported(at + 19, "packed width exceeds 32 bits")
   }
   let bit_count = count.to_int64() * width.to_int64()
-  if template == 0 &&
-    (bit_count + 7L) / 8L != (field.data.length - 5).to_int64() {
-    raise Invalid(
-      field.data.offset,
-      "section 7 length disagrees with packed count and width",
-    )
+  if template == 0 && (bit_count + 7L) / 8L != (data_length - 5).to_int64() {
+    raise Invalid(at, "section 7 length disagrees with packed count and width")
   }
   let binary = signed_magnitude(bytes, at + 15, 2)
   let decimal = signed_magnitude(bytes, at + 17, 2)

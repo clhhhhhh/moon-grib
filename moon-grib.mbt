@@ -91,51 +91,50 @@ fn is_marker(bytes : Bytes, at : Int32, values : Bytes) -> Bool {
 
 ///|
 pub fn open_archive(bytes : Bytes) -> Archive raise GribError {
-  let fields : Array[Field] = []
-  let mut offset = 0
-  while offset < bytes.length() {
-    offset += read_message(bytes, offset, fields)
-  }
-  if fields.length() == 0 {
-    raise Invalid(0, "archive is empty")
-  }
-  { bytes, fields, }
+  let source = ByteSource::new(bytes.length(), (offset, length) => {
+    bytes[offset:offset + length].to_owned()
+  })
+  { bytes, fields: scan_source(source), }
 }
 
 ///|
 fn read_message(
-  bytes : Bytes,
+  source : ByteSource,
   offset : Int32,
   fields : Array[Field],
 ) -> Int32 raise GribError {
-  if bytes.length() - offset < 20 || !is_marker(bytes, offset, b"GRIB") {
+  if source.length - offset < 20 {
     raise Invalid(offset, "missing GRIB message indicator")
   }
-  if byte_at(bytes, offset + 7) != 2 {
+  let indicator = source.read_exact(offset, 16)
+  if !is_marker(indicator, 0, b"GRIB") {
+    raise Invalid(offset, "missing GRIB message indicator")
+  }
+  if byte_at(indicator, 7) != 2 {
     raise Unsupported(offset + 7, "only GRIB edition 2 is supported")
   }
-  let length = bounded_int(unsigned(bytes, offset + 8, 8), offset + 8)
-  if length < 20 || length > bytes.length() - offset {
+  let length = bounded_int(unsigned(indicator, 8, 8), offset + 8)
+  if length < 20 || length > source.length - offset {
     raise Invalid(offset + 8, "message length exceeds the input")
   }
   let end = offset + length - 4
-  if !is_marker(bytes, end, b"7777") {
+  if !is_marker(source.read_exact(end, 4), 0, b"7777") {
     raise Invalid(end, "missing end section")
   }
   let message : Span = { offset, length, }
-  let discipline = byte_at(bytes, offset + 6)
-  let (identification, _) = read_section(bytes, offset + 16, end, 1, 21)
+  let discipline = byte_at(indicator, 6)
+  let (identification, _) = read_section(source, offset + 16, end, 1, 21)
   let mut cursor = identification.offset + identification.length
   let mut grid : Span? = None
   let mut reusable_bitmap : Span? = None
   let initial_count = fields.length()
   while cursor < end {
-    if end - cursor >= 5 && byte_at(bytes, cursor + 4) == 2 {
-      let (local_section, _) = read_section(bytes, cursor, end, 2, 5)
+    if end - cursor >= 5 && byte_at(source.read_exact(cursor + 4, 1), 0) == 2 {
+      let (local_section, _) = read_section(source, cursor, end, 2, 5)
       cursor += local_section.length
     }
-    if end - cursor >= 5 && byte_at(bytes, cursor + 4) == 3 {
-      let (section, _) = read_section(bytes, cursor, end, 3, 14)
+    if end - cursor >= 5 && byte_at(source.read_exact(cursor + 4, 1), 0) == 3 {
+      let (section, _) = read_section(source, cursor, end, 3, 14)
       grid = Some(section)
       cursor += section.length
     }
@@ -143,16 +142,16 @@ fn read_message(
       raise Invalid(cursor, "field has no grid definition")
     }
     let (product_definition, after_product) = read_section(
-      bytes, cursor, end, 4, 9,
+      source, cursor, end, 4, 9,
     )
     let (representation, after_representation) = read_section(
-      bytes, after_product, end, 5, 11,
+      source, after_product, end, 5, 11,
     )
     let (bitmap, after_bitmap) = read_section(
-      bytes, after_representation, end, 6, 6,
+      source, after_representation, end, 6, 6,
     )
-    let (data, after_data) = read_section(bytes, after_bitmap, end, 7, 5)
-    let flag = byte_at(bytes, bitmap.offset + 5)
+    let (data, after_data) = read_section(source, after_bitmap, end, 7, 5)
+    let flag = byte_at(source.read_exact(bitmap.offset + 5, 1), 0)
     let bitmap_source = match flag {
       0 => {
         reusable_bitmap = Some(bitmap)
@@ -186,7 +185,7 @@ fn read_message(
 
 ///|
 fn read_section(
-  bytes : Bytes,
+  source : ByteSource,
   cursor : Int32,
   end : Int32,
   expected : Int32,
@@ -195,11 +194,12 @@ fn read_section(
   if end - cursor < 5 {
     raise Invalid(cursor, "truncated section header")
   }
-  let length = bounded_int(unsigned(bytes, cursor, 4), cursor)
+  let header = source.read_exact(cursor, 5)
+  let length = bounded_int(unsigned(header, 0, 4), cursor)
   if length < minimum || length > end - cursor {
     raise Invalid(cursor, "invalid section length")
   }
-  if byte_at(bytes, cursor + 4) != expected {
+  if byte_at(header, 4) != expected {
     raise Invalid(cursor + 4, "expected section " + expected.to_string())
   }
   ({ offset: cursor, length, }, cursor + length)

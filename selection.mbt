@@ -6,8 +6,7 @@ priv struct IndexRange {
 
 ///|
 fn axis_edge(
-  origin : Double,
-  positive_step : Double,
+  coordinate : (Int32) -> Double,
   length : Int32,
   boundary : Double,
   upper : Bool,
@@ -16,7 +15,7 @@ fn axis_edge(
   let mut high = length
   while low < high {
     let middle = low + (high - low) / 2
-    let value = origin + middle.to_double() * positive_step
+    let value = coordinate(middle)
     if value < boundary || (upper && value == boundary) {
       low = middle + 1
     } else {
@@ -40,15 +39,13 @@ fn axis_range(
     origin
   }
   let left = axis_edge(
-    ascending_origin,
-    step.abs(),
+    index => ascending_origin + index.to_double() * step.abs(),
     length,
     low - 0.000000001,
     false,
   )
   let right = axis_edge(
-    ascending_origin,
-    step.abs(),
+    index => ascending_origin + index.to_double() * step.abs(),
     length,
     high + 0.000000001,
     true,
@@ -95,4 +92,19 @@ fn longitude_ranges(grid : Grid, bounds : Bounds) -> Array[IndexRange] {
     }
   }
   merged
+}
+
+///|
+fn latitude_range(grid : Grid, bounds : Bounds) -> IndexRange {
+  let descending = grid.latitude(0) > grid.latitude(grid.rows - 1)
+  let coord = index => {
+    grid.latitude(if descending { grid.rows - 1 - index } else { index })
+  }
+  let left = axis_edge(coord, grid.rows, bounds.south - 0.000000001, false)
+  let right = axis_edge(coord, grid.rows, bounds.north + 0.000000001, true)
+  if descending {
+    { start: grid.rows - right, end: grid.rows - left, }
+  } else {
+    { start: left, end: right, }
+  }
 }

@@ -40,11 +40,21 @@ fn parse_bitmap(
       "reused bitmap contains unexpected bytes",
     )
   }
-  let size = ((points.to_int64() + 7L) / 8L).to_int()
-  if span.length - 6 != size {
-    raise Invalid(span.offset, "bitmap length does not match grid")
+  Some(index_bitmap(bytes, span.offset + 6, span.length - 6, points, packed))
+}
+
+///|
+fn index_bitmap(
+  bytes : Bytes,
+  start : Int32,
+  size : Int32,
+  points : Int32,
+  packed : Int32,
+) -> Bitmap raise GribError {
+  let needed = ((points.to_int64() + 7L) / 8L).to_int()
+  if size != needed {
+    raise Invalid(start, "bitmap length does not match grid")
   }
-  let start = span.offset + 6
   let ranks : Array[Int32] = []
   let mut count = 0
   for i in 0..<size {
@@ -60,9 +70,9 @@ fn parse_bitmap(
     count += popcount(octet)
   }
   if count != packed {
-    raise Invalid(span.offset, "bitmap population does not match packed count")
+    raise Invalid(start, "bitmap population does not match packed count")
   }
-  Some({ start, ranks, })
+  { start, ranks, }
 }
 
 ///|

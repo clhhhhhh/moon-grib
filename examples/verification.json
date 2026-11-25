@@ -4,43 +4,71 @@
       24,
       24
     ],
+    "grid_template": 0,
     "bitmap": false,
     "packing": "grid_simple",
     "verified_points": 121,
     "missing_points": 0,
-    "cli_wall_seconds": 0.1169
+    "cli_wall_seconds": 0.1201
   },
   {
     "grid": [
       200,
       200
     ],
+    "grid_template": 0,
     "bitmap": true,
     "packing": "grid_simple",
     "verified_points": 121,
     "missing_points": 17,
-    "cli_wall_seconds": 0.1168
+    "cli_wall_seconds": 0.1044
   },
   {
     "grid": [
       200,
       200
     ],
+    "grid_template": 0,
     "bitmap": false,
     "packing": "grid_complex",
     "verified_points": 121,
     "missing_points": 0,
-    "cli_wall_seconds": 0.1378
+    "cli_wall_seconds": 0.114
   },
   {
     "grid": [
       200,
       200
     ],
+    "grid_template": 0,
     "bitmap": false,
     "packing": "grid_complex_spatial_differencing",
     "verified_points": 121,
     "missing_points": 0,
-    "cli_wall_seconds": 0.1245
+    "cli_wall_seconds": 0.119
+  },
+  {
+    "grid": [
+      24,
+      24
+    ],
+    "grid_template": 0,
+    "bitmap": true,
+    "packing": "grid_ieee",
+    "verified_points": 121,
+    "missing_points": 18,
+    "cli_wall_seconds": 0.1062
+  },
+  {
+    "grid": [
+      128,
+      64
+    ],
+    "grid_template": 40,
+    "bitmap": false,
+    "packing": "grid_simple",
+    "verified_points": 15,
+    "missing_points": 0,
+    "cli_wall_seconds": 0.1133
   }
 ]

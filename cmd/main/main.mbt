@@ -41,26 +41,100 @@ fn main {
   let args = @env.args()
   try {
     match args[2:] {
+      ["range-inventory", path] => range_inventory(path)
+      ["extract-message", path, index] =>
+        extract_message(path, parse_index(index))
+      ["field-span", path, index] => print_field_span(path, parse_index(index))
       ["inventory", path] => {
         let archive = load(path)
         for i in 0..<archive.field_count() {
           println(archive.metadata(i).json().stringify())
         }
       }
-      ["window" | "stats" as command, path, index, west, south, east, north] => {
-        let archive = load(path)
-        let field = archive.decode(parse_index(index))
-        let bounds : @grib.Bounds = {
-          west: parse_numeric(west),
-          south: parse_numeric(south),
-          east: parse_numeric(east),
-          north: parse_numeric(north),
-        }
-        if command == "stats" {
-          println(field.statistics(bounds).json().stringify())
+      [
+        "window"
+        | "stats"
+        | "range-window"
+        | "scan-window" as command,
+        path,
+        index,
+        west,
+        south,
+        east,
+        north,
+      ] => {
+        let bounds = coordinates(west, south, east, north)
+        let field_index = parse_index(index)
+        if command == "range-window" {
+          range_window(path, field_index, bounds)
         } else {
-          println(@grib.samples_csv(field.window(bounds)))
+          let field = load(path).decode(field_index)
+          if command == "stats" {
+            println(field.statistics(bounds).json().stringify())
+          } else {
+            let samples = if command == "scan-window" {
+              field.scan_window(bounds)
+            } else {
+              field.window(bounds)
+            }
+            write_stdout(@grib.samples_csv(samples))
+          }
         }
+      }
+      ["estimate", path, index, lat, lon, mode] =>
+        estimate_at(path, index, lat, lon, mode)
+      ["profile", path, index, lat1, lon1, lat2, lon2, size, mode] =>
+        profile_at(path, index, lat1, lon1, lat2, lon2, size, mode)
+      ["compare", left, li, right, ri, west, south, east, north, tolerance] =>
+        report_comparison(
+          left,
+          li,
+          right,
+          ri,
+          coordinates(west, south, east, north),
+          tolerance,
+        )
+      ["select", path, discipline, category, parameter, level] =>
+        search_inventory(path, discipline, category, parameter, level)
+      ["point-series", path, d, c, p, lat, lon, start, end, mode] =>
+        point_series(path, d, c, p, lat, lon, start, end, mode)
+      ["regional-series", path, d, c, p, west, south, east, north, start, end] =>
+        regional_series(
+          path,
+          d,
+          c,
+          p,
+          coordinates(west, south, east, north),
+          start,
+          end,
+        )
+      ["interval", path, index] => print_interval(path, index)
+      ["raster", path, index, west, south, east, north, format] =>
+        print_raster(path, index, coordinates(west, south, east, north), format)
+      [
+        "resample",
+        path,
+        index,
+        rows,
+        columns,
+        north,
+        west,
+        dy,
+        dx,
+        mode,
+        format,
+      ] =>
+        resample_raster(
+          path, index, rows, columns, north, west, dy, dx, mode, format,
+        )
+      ["area-stats", path, index, west, south, east, north] => {
+        let field = load(path).decode(parse_index(index))
+        println(
+          field
+          .area_statistics(coordinates(west, south, east, north))
+          .json()
+          .stringify(),
+        )
       }
       ["verify", path] =>
         for diagnostic in load(path).validate() {
@@ -79,7 +153,7 @@ fn main {
         )
       _ =>
         raise @grib.Invalid(
-          0, "Usage: inventory FILE | verify FILE | point FILE FIELD ROW COLUMN | window|stats FILE FIELD WEST SOUTH EAST NORTH",
+          0, "Usage: resample FILE FIELD ROWS COLUMNS NORTH WEST DY DX MODE FORMAT | area-stats FILE FIELD WEST SOUTH EAST NORTH | point-series FILE DISC CAT PARAM LAT LON START END MODE | regional-series FILE DISC CAT PARAM WEST SOUTH EAST NORTH START END | interval FILE FIELD | raster FILE FIELD WEST SOUTH EAST NORTH FORMAT | inventory FILE | range-inventory FILE | extract-message FILE FIELD | field-span FILE FIELD | select FILE DISCIPLINE CATEGORY PARAMETER LEVEL | estimate FILE FIELD LAT LON MODE | profile FILE FIELD LAT1 LON1 LAT2 LON2 POINTS MODE | compare LEFT LFIELD RIGHT RFIELD WEST SOUTH EAST NORTH TOLERANCE | verify FILE | point FILE FIELD ROW COLUMN | window|stats|range-window|scan-window FILE FIELD WEST SOUTH EAST NORTH",
         )
     }
   } catch {

@@ -1,0 +1,56 @@
+[
+  {
+    "bounds": [
+      101,
+      38,
+      102,
+      39
+    ],
+    "selected_points": 121,
+    "file_bytes": 11522864,
+    "full_scan_points": 360000,
+    "range_window": {
+      "window": {
+        "samples": 121,
+        "payload_reads": 11,
+        "payload_bytes": 242,
+        "decoded_values": 121,
+        "missing_points": 0
+      },
+      "source_reads": 190,
+      "source_bytes": 1184
+    },
+    "median_cli_wall_ms": {
+      "scan-window": 181.74,
+      "window": 109.75,
+      "range-window": 108.82
+    }
+  },
+  {
+    "bounds": [
+      103,
+      16,
+      123,
+      36
+    ],
+    "selected_points": 40401,
+    "file_bytes": 11522864,
+    "full_scan_points": 360000,
+    "range_window": {
+      "window": {
+        "samples": 40401,
+        "payload_reads": 201,
+        "payload_bytes": 80802,
+        "decoded_values": 40401,
+        "missing_points": 0
+      },
+      "source_reads": 380,
+      "source_bytes": 81744
+    },
+    "median_cli_wall_ms": {
+      "scan-window": 220.23,
+      "window": 174.01,
+      "range-window": 214.42
+    }
+  }
+]

@@ -6,6 +6,7 @@ pub struct Grid {
   first_latitude : Double
   first_longitude : Double
   latitude_step : Double
+  priv latitudes : Array[Double]?
   longitude_step : Double
   column_major : Bool
   alternating : Bool
@@ -20,7 +21,7 @@ pub fn Archive::grid(self : Archive, index : Int32) -> Grid raise GribError {
 fn parse_grid(bytes : Bytes, span : Span) -> Grid raise GribError {
   let at = span.offset
   let template = u16(bytes, at + 12)
-  if template != 0 {
+  if template != 0 && template != 40 {
     raise Unsupported(
       at + 12,
       "unsupported grid template 3." + template.to_string(),
@@ -59,8 +60,48 @@ fn parse_grid(bytes : Bytes, span : Span) -> Grid raise GribError {
   let j_sign = if (scan & 64) != 0 { 1.0 } else { -1.0 }
   let first_latitude = signed_magnitude(bytes, at + 46, 4).to_double() * unit
   let first_longitude = signed_magnitude(bytes, at + 50, 4).to_double() * unit
-  let latitude_step = increment(bytes, at + 67, ny, unit) * j_sign
-  let longitude_step = increment(bytes, at + 63, nx, unit) * i_sign
+  let latitude_step = if template == 0 {
+    increment(bytes, at + 67, ny, unit) * j_sign
+  } else {
+    0.0
+  }
+  let latitudes = if template == 40 {
+    let parallels = bounded_int(unsigned(bytes, at + 67, 4), at + 67)
+    let last_latitude = signed_magnitude(bytes, at + 55, 4).to_double() * unit
+    let endpoint_row = if (scan & 32) != 0 && (scan & 16) != 0 && nx % 2 == 0 {
+      0
+    } else {
+      ny - 1
+    }
+    Some(
+      select_gaussian_rows(
+        parallels,
+        ny,
+        first_latitude,
+        last_latitude,
+        j_sign > 0.0,
+        endpoint_row,
+        unit + 0.0000000001,
+        at + 67,
+      ),
+    )
+  } else {
+    None
+  }
+  let declared_increment = increment(bytes, at + 63, nx, unit)
+  let last_column_is_first = (scan & 32) == 0 && (scan & 16) != 0 && ny % 2 == 0
+  let longitude_step = if template == 40 && nx > 1 && !last_column_is_first {
+    let last = signed_magnitude(bytes, at + 59, 4).to_double() * unit
+    let extent = (last - first_longitude) * i_sign
+    let span = if extent < 0.0 { extent + 360.0 } else { extent }
+    if span > 0.0 {
+      span / (nx - 1).to_double() * i_sign
+    } else {
+      declared_increment * i_sign
+    }
+  } else {
+    declared_increment * i_sign
+  }
   let final_latitude = first_latitude + (ny - 1).to_double() * latitude_step
   if first_latitude.abs() > 90.000001 ||
     final_latitude.abs() > 90.000001 ||
@@ -75,6 +116,7 @@ fn parse_grid(bytes : Bytes, span : Span) -> Grid raise GribError {
     first_latitude,
     first_longitude,
     latitude_step,
+    latitudes,
     longitude_step,
     column_major: (scan & 32) != 0,
     alternating: (scan & 16) != 0,
@@ -112,7 +154,10 @@ pub fn Grid::longitude(self : Grid, column : Int32) -> Double {
 
 ///|
 pub fn Grid::latitude(self : Grid, row : Int32) -> Double {
-  self.first_latitude + row.to_double() * self.latitude_step
+  match self.latitudes {
+    Some(axis) => axis[row]
+    None => self.first_latitude + row.to_double() * self.latitude_step
+  }
 }
 
 ///|

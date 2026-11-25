@@ -48,12 +48,24 @@ def source(path, size, bitmap, packing):
         eccodes.codes_release(gid)
 
 
-def check_case(path, size, bitmap, packing):
-    source(path, size, bitmap, packing)
+def check_case(path, size, bitmap, packing, gaussian=False):
+    if gaussian:
+        sample = eccodes.codes_grib_new_from_samples("regular_gg_sfc_grib2")
+        try:
+            columns = eccodes.codes_get(sample, "Ni")
+            rows = eccodes.codes_get(sample, "Nj")
+            eccodes.codes_set_values(sample, np.arange(rows * columns, dtype=float))
+            with path.open("wb") as out:
+                eccodes.codes_write(sample, out)
+        finally:
+            eccodes.codes_release(sample)
+    else:
+        rows = columns = size
+        source(path, size, bitmap, packing)
     with path.open("rb") as stream:
         gid = eccodes.codes_grib_new_from_file(stream)
     try:
-        west, south, east, north = 101.0, 38.0, 102.0, 39.0
+        west, south, east, north = (0.0, 35.0, 12.0, 44.0) if gaussian else (101.0, 38.0, 102.0, 39.0)
         expected = {}
         latitudes = eccodes.codes_get_array(gid, "latitudes")
         longitudes = eccodes.codes_get_array(gid, "longitudes")
@@ -61,7 +73,7 @@ def check_case(path, size, bitmap, packing):
         mask = eccodes.codes_get_array(gid, "bitmap") if bitmap else np.ones(len(values))
         for i, (lat, lon, value, valid) in enumerate(zip(latitudes, longitudes, values, mask)):
             if west - 1e-9 <= lon <= east + 1e-9 and south - 1e-9 <= lat <= north + 1e-9:
-                expected[divmod(i, size)] = (lat, lon, value if valid else None)
+                expected[divmod(i, columns)] = (lat, lon, value if valid else None)
         start = perf_counter()
         output = invoke("window", path, 0, west, south, east, north)
         elapsed = perf_counter() - start
@@ -80,9 +92,12 @@ def check_case(path, size, bitmap, packing):
         assert not expected
         inventory = json.loads(invoke("inventory", path))
         assert inventory["length"] == path.stat().st_size
-        assert inventory["grid_template"] == 0
-        assert inventory["packing_template"] == {"grid_simple": 0, "grid_complex": 2, "grid_complex_spatial_differencing": 3}[packing]
-        return {"grid": [size, size], "bitmap": bitmap, "packing": packing, "verified_points": len(rows),
+        assert inventory["grid_template"] == (40 if gaussian else 0)
+        assert inventory["packing_template"] == {"grid_simple": 0, "grid_complex": 2, "grid_complex_spatial_differencing": 3, "grid_ieee": 4}[packing]
+        if packing in ("grid_simple", "grid_ieee"):
+            assert invoke("range-window", path, 0, west, south, east, north) == output
+        return {"grid": [eccodes.codes_get(gid, "Ni"), eccodes.codes_get(gid, "Nj")],
+                "grid_template": inventory["grid_template"], "bitmap": bitmap, "packing": packing, "verified_points": len(rows),
                 "missing_points": sum(row["value"] == "" for row in rows),
                 "cli_wall_seconds": round(elapsed, 4)}
     finally:
@@ -95,4 +110,6 @@ if __name__ == "__main__":
         print(json.dumps([check_case(path, 24, False, "grid_simple"),
                           check_case(path, 200, True, "grid_simple"),
                           check_case(path, 200, False, "grid_complex"),
-                          check_case(path, 200, False, "grid_complex_spatial_differencing")], indent=2))
+                          check_case(path, 200, False, "grid_complex_spatial_differencing"),
+                          check_case(path, 24, True, "grid_ieee"),
+                          check_case(path, None, False, "grid_simple", gaussian=True)], indent=2))

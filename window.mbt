@@ -23,6 +23,7 @@ pub struct DecodedField {
   priv packing : Packing
   priv grouped : GroupedPacking?
   priv difference : DifferenceIndex?
+  priv ieee_width : Int32
   payload : Int32
 }
 
@@ -33,8 +34,17 @@ pub fn Archive::decode(
 ) -> DecodedField raise GribError {
   let field = self.field(index)
   let grid = parse_grid(self.bytes, field.grid_definition)
-  let packing = parse_packing(self.bytes, field)
   let template = u16(self.bytes, field.representation.offset + 9)
+  let (packing, ieee_width) = if template == 4 {
+    let (width, count) = ieee_precision(
+      self.bytes,
+      field.representation,
+      field.data.length,
+    )
+    (ieee_packing(width, count), width)
+  } else {
+    (parse_packing(self.bytes, field), 0)
+  }
   let payload = field.data.offset + 5
   let (grouped, difference) = match template {
     2 => (Some(parse_groups(self.bytes, field, packing, 0)), None)
@@ -57,7 +67,16 @@ pub fn Archive::decode(
     _ => (None, None)
   }
   let bitmap = parse_bitmap(self.bytes, field, grid.points, packing.count)
-  { bytes: self.bytes, grid, bitmap, packing, grouped, difference, payload, }
+  {
+    bytes: self.bytes,
+    grid,
+    bitmap,
+    packing,
+    grouped,
+    difference,
+    ieee_width,
+    payload,
+  }
 }
 
 ///|
@@ -83,6 +102,14 @@ pub fn DecodedField::at(
     None => Some(scan)
   }
   let value = match ordinal {
+    Some(index) if self.ieee_width > 0 =>
+      Some(
+        ieee_value(
+          self.bytes,
+          self.payload + index * self.ieee_width,
+          self.ieee_width,
+        ),
+      )
     Some(index) => {
       let integer = match self.grouped {
         None =>
@@ -143,29 +170,7 @@ pub fn DecodedField::visit_window(
   emit : (Sample) -> Unit,
   max_points~ : Int32 = 1000000,
 ) -> Unit raise GribError {
-  validate_bounds(bounds)
-  if max_points < 0 {
-    raise Invalid(0, "point limit must be nonnegative")
-  }
-  let columns = longitude_ranges(self.grid, bounds)
-  let rows = axis_range(
-    self.grid.first_latitude,
-    self.grid.latitude_step,
-    self.grid.rows,
-    bounds.south,
-    bounds.north,
-  )
-  let mut width = 0
-  for interval in columns {
-    width += interval.end - interval.start
-  }
-  let count = width.to_int64() * (rows.end - rows.start).to_int64()
-  if count > max_points.to_int64() {
-    raise Unsupported(self.payload, "window exceeds point limit")
-  }
-  if count == 0L {
-    return
-  }
+  let (rows, columns) = window_ranges(self.grid, bounds, max_points)
   for row in rows.start..<rows.end {
     for interval in columns {
       for column in interval.start..<interval.end {
@@ -173,4 +178,27 @@ pub fn DecodedField::visit_window(
       }
     }
   }
+}
+
+///|
+fn window_ranges(
+  grid : Grid,
+  bounds : Bounds,
+  max_points : Int32,
+) -> (IndexRange, Array[IndexRange]) raise GribError {
+  validate_bounds(bounds)
+  if max_points < 0 {
+    raise Invalid(0, "point limit must be nonnegative")
+  }
+  let columns = longitude_ranges(grid, bounds)
+  let rows = latitude_range(grid, bounds)
+  let mut width = 0
+  for interval in columns {
+    width += interval.end - interval.start
+  }
+  let count = width.to_int64() * (rows.end - rows.start).to_int64()
+  if count > max_points.to_int64() {
+    raise Unsupported(0, "window exceeds point limit")
+  }
+  (rows, columns)
 }

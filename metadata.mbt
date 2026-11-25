@@ -67,12 +67,7 @@ fn parse_time(bytes : Bytes, start : Int32) -> ReferenceTime raise GribError {
   let hour = byte_at(bytes, start + 4)
   let minute = byte_at(bytes, start + 5)
   let second = byte_at(bytes, start + 6)
-  let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
-  let max_day = match month {
-    2 => if leap { 29 } else { 28 }
-    4 | 6 | 9 | 11 => 30
-    _ => 31
-  }
+  let max_day = days_in_month(year, month)
   if year == 0 ||
     month < 1 ||
     month > 12 ||
@@ -97,7 +92,7 @@ fn read_surface(bytes : Bytes, start : Int32) -> Surface? {
     None
   } else {
     let scale = signed_magnitude(bytes, start + 1, 1)
-    let magnitude = signed_magnitude(bytes, start + 2, 4)
+    let magnitude = unsigned(bytes, start + 2, 4)
     Some(magnitude.to_double() * pow_int(10.0, -scale))
   }
   Some({ kind, value, })
@@ -109,11 +104,37 @@ pub fn Archive::metadata(
   index : Int32,
 ) -> Metadata raise GribError {
   let field = self.field(index)
-  let product = field.product_definition.offset
+  metadata_from_headers(
+    field,
+    index,
+    self.bytes,
+    field.identification.offset,
+    self.bytes,
+    field.grid_definition.offset,
+    self.bytes,
+    field.representation.offset,
+    self.bytes,
+    field.product_definition.offset,
+  )
+}
+
+///|
+fn metadata_from_headers(
+  field : Field,
+  index : Int32,
+  identification_bytes : Bytes,
+  identification : Int32,
+  grid : Bytes,
+  grid_start : Int32,
+  representation : Bytes,
+  representation_start : Int32,
+  product_bytes : Bytes,
+  product : Int32,
+) -> Metadata raise GribError {
   if field.product_definition.length < 11 {
     raise Invalid(product, "truncated product header")
   }
-  let product_template = u16(self.bytes, product + 7)
+  let product_template = u16(product_bytes, product + 7)
   let common = match product_template {
     0 | 1 | 2 | 8 | 11 | 12 => true
     _ => false
@@ -121,37 +142,37 @@ pub fn Archive::metadata(
   if common && field.product_definition.length < 34 {
     raise Invalid(product, "truncated product metadata")
   }
-  let identification = field.identification.offset
   {
     field_index: index,
-    origin: parse_time(self.bytes, identification + 12),
-    centre: u16(self.bytes, identification + 5),
-    subcentre: u16(self.bytes, identification + 7),
+    origin: parse_time(identification_bytes, identification + 12),
+    centre: u16(identification_bytes, identification + 5),
+    subcentre: u16(identification_bytes, identification + 7),
     variable: {
       discipline: field.discipline,
-      category: byte_at(self.bytes, product + 9),
-      parameter: byte_at(self.bytes, product + 10),
+      category: byte_at(product_bytes, product + 9),
+      parameter: byte_at(product_bytes, product + 10),
     },
     product_template,
-    grid_template: u16(self.bytes, field.grid_definition.offset + 12),
-    packing_template: u16(self.bytes, field.representation.offset + 9),
-    forecast_unit: if common {
-      Some(byte_at(self.bytes, product + 17))
+    grid_template: u16(grid, grid_start + 12),
+    packing_template: u16(representation, representation_start + 9),
+    forecast_unit: if common && byte_at(product_bytes, product + 17) != 255 {
+      Some(byte_at(product_bytes, product + 17))
     } else {
       None
     },
-    forecast_offset: if common {
-      Some(signed_magnitude(self.bytes, product + 18, 4))
+    forecast_offset: if common &&
+      unsigned(product_bytes, product + 18, 4) != 4294967295UL {
+      Some(signed_magnitude(product_bytes, product + 18, 4))
     } else {
       None
     },
     first_surface: if common {
-      read_surface(self.bytes, product + 22)
+      read_surface(product_bytes, product + 22)
     } else {
       None
     },
     second_surface: if common {
-      read_surface(self.bytes, product + 28)
+      read_surface(product_bytes, product + 28)
     } else {
       None
     },

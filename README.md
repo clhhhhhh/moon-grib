@@ -1,43 +1,53 @@
 # MoonGRIB
 
-MoonGRIB 是用 MoonBit 编写的 GRIB2 读取库和命令行工具。它按变量、层次与时次查看文件内容，并从规则经纬网格中提取指定区域的格点。结果包含行列号、坐标和数值，缺测值保留为空。
+MoonGRIB 是用 MoonBit 编写的 GRIB2 库和命令行工具。它按变量、层次与时次查看文件内容，并从气象网格中提取指定区域，输出坐标、数值和缺测标记。
 
 ## 快速开始
 
-需要 MoonBit 工具链。JavaScript 命令行入口需要 Node.js。示例里的字段编号、行号和列号均从 0 开始。
+需要 MoonBit 工具链。JavaScript 命令行入口需要 Node.js。字段编号、行号和列号从 0 开始。
 
 ```sh
 moon test --deny-warn
 moon test --target js --deny-warn
-moon run cmd/main --target js -- inventory sample.grib2
-moon run cmd/main --target js -- verify sample.grib2
-moon run cmd/main --target js -- point sample.grib2 0 25 60
-moon run cmd/main --target js -- window sample.grib2 0 119.5 29.7 120.6 30.7
-moon run cmd/main --target js -- stats sample.grib2 0 119.5 29.7 120.6 30.7
+moon run cmd/main --target js -- range-inventory sample.grib2
+moon run cmd/main --target js -- range-window sample.grib2 0 119.5 29.7 120.6 30.7
+moon run cmd/main --target js -- estimate sample.grib2 0 30.2 120.1 bilinear
+moon run cmd/main --target js -- raster sample.grib2 0 119.5 29.7 120.6 30.7 asc
 ```
 
-窗口参数依次为西、南、东、北，端点包含在内。西界大于东界表示窗口跨越日期变更线。输出经度规范化到 `[-180, 180)`。`inventory` 和 `verify` 输出 JSON Lines，`point` 和 `stats` 输出 JSON，`window` 输出 CSV。
+窗口参数依次为西、南、东、北，包含端点。西界大于东界表示跨日期变更线。经度输出范围为 `[-180, 180)`。窗口输出 CSV，`range-window` 另在标准错误流输出读取次数、字节数和解码数。栅格可导出 ASCII Grid 或 PGM，ASCII Grid 需要等间距的方形单元。
 
-库入口为 `open_archive`。通过 `Archive::select` 按变量代码、层次、时次等条件筛选，通过 `Archive::decode` 打开格点字段。随后用 `DecodedField::at` 查询单点，用 `window` 收集区域数据，或用 `visit_window` 逐格处理。
+## 功能和格式范围
 
-## 格式范围
+| 能力 | 入口或范围 |
+| --- | --- |
+| 文件和消息 | `open_archive` 从内存打开，`open_indexed` 按需读取。支持连续消息、消息内多字段、可选本地节和先前位图引用 |
+| 网格 | 规则经纬网格 3.0、规则高斯网格 3.40，支持正反方向、行列优先、交替扫描和缺测位图。缩减网格和交错网格超出当前范围 |
+| 内存读取 | 简单打包 5.0、通用组拆分 5.2、一阶及二阶空间差分 5.3，以及单精度或双精度 IEEE 5.4 |
+| 读取文件范围 | `range-window` 按需读取 5.0 和 5.4 的偏移区间，`range-inventory` 仅读取消息结构和元数据 |
+| 查询和比较 | `point`、`stats`、`estimate`、`profile`、`compare`。支持最近邻、双线性插值和缺测策略 |
+| 时间轴 | 支持瞬时产品的有效时刻、点位和区域时间序列，`interval` 展示模板 4.8 的区间与统计描述 |
+| 导出和编码 | 窗口 CSV、JSON Lines、ASCII Grid、PGM。MoonBit API 可编码规则经纬网格的简单整数打包或 IEEE64 |
 
-- GRIB 版次 2，支持顺序拼接消息、同一消息包含多个字段、可选本地段和位图引用。
-- 规则经纬网格模板 3.0，支持正反方向、行列优先、交替扫描和缺测位图。
-- 简单打包 5.0、通用组拆分的复杂打包 5.2、带一阶或二阶空间差分的复杂打包 5.3。位宽、差分描述符和预处理规模受实现限制。
-- 读取参考时间、来源中心、变量代码和常见产品模板的预报步长、固定面。未知模板通过代码编号保留在清单中。
+库入口 `open_indexed` 接受 `ByteSource` 回调，可以从本地文件或其他支持定位偏移的数据源读取。范围查询合并相邻字节段，位图存在时先构建缺测值索引。空间差分采用预处理与检查点恢复，适用于内存读取路径。CLI 支持的具体命令可直接运行 `moon run cmd/main --target js` 查看。
 
-窗口先用二分定位相关经纬度范围。简单打包直接定位所需值。复杂打包通过分组偏移定位，空间差分需要一次预处理，随后从检查点恢复局部值。库接收内存中的文件字节，CLI 加载整个本地文件，默认接受不超过 512 MiB 的普通文件。上述优化减少解码工作量。
+## 验证与性能
 
-## 独立验证
-
-安装 Python 的 `eccodes` 和 `numpy` 后运行：
+Python 对照脚本使用 ECMWF ecCodes 和 NumPy。
 
 ```sh
 moon build --target js
 python examples/verify_eccodes.py
+python -B examples/benchmark_window.py
 ```
 
-脚本用 ECMWF ecCodes 生成样本，并独立核对窗口的行列号、坐标、数值和缺测标记。已运行的四组结果见 [验证数据](examples/verification.json)。脚本中的耗时是单次 CLI 墙钟时间，包含 Node.js 启动与文件读取。
+[逐点验证结果](examples/verification.json)覆盖四种数据表示和两种网格。 [窗口基准](examples/benchmark_results.json)使用一个由 16 条消息组成的 11,522,864 字节文件。每次对照检查三种命令的 CSV 输出完全一致，墙钟时间采用五次独立 CLI 启动的中位数。
+
+| 窗口 | 格点数 | 整场解码后裁剪 | 内存内窗口解码 | 按范围读取 | 范围读取字节 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 小窗口 | 121 | 181.74 ms | 109.75 ms | 108.82 ms | 1184 |
+| 大窗口 | 40401 | 220.23 ms | 174.01 ms | 214.42 ms | 81744 |
+
+范围读取字节包含从文件读取的消息索引、字段元数据和负载，计时包含 Node.js 启动和 CSV 序列化。大窗口在本机上的范围读取耗时高于内存内窗口路径。
 
 格式说明见 [ECMWF GRIB2 模板](https://codes.ecmwf.int/grib/) 与 [ecCodes 文档](https://sites.ecmwf.int/docs/eccodes/)。许可证为 Apache-2.0。

@@ -6,9 +6,19 @@ import {
 }
 
 // Values
+pub fn encode_ieee(RegularGridSpec, ProductSpec, Array[Double?]) -> Bytes raise GribError
+
+pub fn encode_simple(RegularGridSpec, ProductSpec, IntegerPackingSpec, Array[UInt32?]) -> Bytes raise GribError
+
 pub fn open_archive(Bytes) -> Archive raise GribError
 
+pub fn open_indexed(ByteSource) -> IndexedArchive raise GribError
+
+pub fn open_range_field(ByteSource, Field) -> RangeField raise GribError
+
 pub fn samples_csv(Array[Sample]) -> String
+
+pub fn scan_source(ByteSource) -> Array[Field] raise GribError
 
 // Errors
 pub(all) suberror GribError {
@@ -17,17 +27,39 @@ pub(all) suberror GribError {
 }
 
 // Types and methods
+pub(all) struct AggregationInterval {
+  start : ReferenceTime?
+  end : ReferenceTime
+  missing_inputs : UInt64?
+  ranges : Array[StatisticalRange]
+}
+pub fn AggregationInterval::json(Self) -> @json.Json
+
 pub struct Archive {
   bytes : Bytes
   fields : Array[Field]
 }
+pub fn Archive::aggregation_interval(Self, Int32) -> AggregationInterval? raise GribError
 pub fn Archive::decode(Self, Int32) -> DecodedField raise GribError
 pub fn Archive::field(Self, Int32) -> Field raise GribError
 pub fn Archive::field_count(Self) -> Int32
 pub fn Archive::grid(Self, Int32) -> Grid raise GribError
 pub fn Archive::metadata(Self, Int32) -> Metadata raise GribError
+pub fn Archive::point_series(Self, Filter, Position, ReferenceTime, ReferenceTime, options? : SeriesOptions) -> Array[SeriesPoint] raise GribError
+pub fn Archive::regional_series(Self, Filter, Bounds, ReferenceTime, ReferenceTime, max_fields? : Int32, max_points? : Int32) -> Array[RegionalSeriesPoint] raise GribError
 pub fn Archive::select(Self, Filter) -> Array[Metadata] raise GribError
+pub fn Archive::select_valid_time(Self, Filter, ReferenceTime, ReferenceTime) -> Array[Metadata] raise GribError
 pub fn Archive::validate(Self, decode_values? : Bool) -> Array[FieldDiagnostic]
+
+pub(all) struct AreaStatistics {
+  points : Int32
+  present : Int32
+  missing : Int32
+  footprint_steradians : Double
+  covered_steradians : Double
+  weighted_mean : Double?
+}
+pub fn AreaStatistics::json(Self) -> @json.Json
 
 pub(all) struct Bounds {
   west : Double
@@ -36,17 +68,39 @@ pub(all) struct Bounds {
   north : Double
 }
 
+pub struct ByteSource {
+  length : Int32
+  // private fields
+}
+pub fn ByteSource::new(Int32, (Int32, Int32) -> Bytes raise GribError) -> Self raise GribError
+pub fn ByteSource::read_exact(Self, Int32, Int32) -> Bytes raise GribError
+pub fn ByteSource::read_span(Self, Span) -> Bytes raise GribError
+
 pub struct DecodedField {
   bytes : Bytes
   grid : Grid
   payload : Int32
   // private fields
 }
+pub fn DecodedField::area_statistics(Self, Bounds, max_points? : Int32) -> AreaStatistics raise GribError
 pub fn DecodedField::at(Self, Int32, Int32) -> Sample raise GribError
+pub fn DecodedField::compare_window(Self, Self, Bounds, tolerance? : Double, max_points? : Int32) -> WindowDifference raise GribError
 pub fn DecodedField::dimensions(Self) -> (Int32, Int32)
+pub fn DecodedField::estimate(Self, Position, interpolation? : InterpolationMethod, missing? : MissingPolicy) -> EstimatedValue raise GribError
+pub fn DecodedField::profile(Self, Position, Position, Int32, interpolation? : InterpolationMethod, missing? : MissingPolicy) -> Array[EstimatedValue] raise GribError
+pub fn DecodedField::raster(Self, Bounds, max_points? : Int32) -> Raster raise GribError
+pub fn DecodedField::resample(Self, TargetGrid, interpolation? : InterpolationMethod, missing? : MissingPolicy, max_points? : Int32) -> ResamplingResult raise GribError
+pub fn DecodedField::scan_window(Self, Bounds, max_points? : Int32, scan_limit? : Int32) -> Array[Sample] raise GribError
 pub fn DecodedField::statistics(Self, Bounds, max_points? : Int32) -> Statistics raise GribError
 pub fn DecodedField::visit_window(Self, Bounds, (Sample) -> Unit, max_points? : Int32) -> Unit raise GribError
 pub fn DecodedField::window(Self, Bounds, max_points? : Int32) -> Array[Sample] raise GribError
+
+pub(all) struct EstimatedValue {
+  position : Position
+  value : Double?
+  contributing_points : Int32
+}
+pub fn EstimatedValue::json(Self) -> @json.Json
 
 pub(all) struct Field {
   discipline : Int32
@@ -85,6 +139,12 @@ pub(all) struct Filter {
 pub fn Filter::empty() -> Self
 pub fn Filter::matches(Self, Metadata) -> Bool
 
+pub(all) struct ForecastTime {
+  reference : ReferenceTime
+  valid : ReferenceTime
+  offset_seconds : Int64
+}
+
 pub struct Grid {
   columns : Int32
   rows : Int32
@@ -95,9 +155,30 @@ pub struct Grid {
   longitude_step : Double
   column_major : Bool
   alternating : Bool
+  // private fields
 }
 pub fn Grid::latitude(Self, Int32) -> Double
 pub fn Grid::longitude(Self, Int32) -> Double
+
+pub struct IndexedArchive {
+  // private fields
+}
+pub fn IndexedArchive::decode(Self, Int32) -> RangeField raise GribError
+pub fn IndexedArchive::field(Self, Int32) -> Field raise GribError
+pub fn IndexedArchive::field_count(Self) -> Int32
+pub fn IndexedArchive::metadata(Self, Int32) -> Metadata raise GribError
+pub fn IndexedArchive::raw_message(Self, Int32, max_bytes? : Int32) -> Bytes raise GribError
+pub fn IndexedArchive::select(Self, Filter) -> Array[Metadata] raise GribError
+
+pub(all) struct IntegerPackingSpec {
+  binary_scale : Int32
+  decimal_scale : Int32
+}
+
+pub(all) enum InterpolationMethod {
+  Nearest
+  Bilinear
+}
 
 pub(all) struct Metadata {
   field_index : Int32
@@ -115,6 +196,64 @@ pub(all) struct Metadata {
   message : Span
 }
 pub fn Metadata::json(Self) -> @json.Json
+pub fn Metadata::valid_time(Self) -> ForecastTime? raise GribError
+
+pub(all) enum MissingPolicy {
+  RequireAll
+  Renormalize
+}
+
+pub(all) struct Position {
+  latitude : Double
+  longitude : Double
+}
+
+pub(all) struct ProductSpec {
+  variable : Variable
+  reference : ReferenceTime
+  centre : Int32
+  subcentre : Int32
+  forecast_unit : Int32
+  forecast_offset : Int32
+  level_kind : Int32
+  level_value : Int32?
+}
+
+pub struct RangeField {
+  grid : Grid
+  // private fields
+}
+pub fn RangeField::window(Self, Bounds, options? : RangeOptions) -> ReadWindow raise GribError
+
+pub(all) struct RangeOptions {
+  max_points : Int32
+  merge_gap : Int32
+  max_read : Int32
+}
+pub fn RangeOptions::standard() -> Self
+
+pub struct Raster {
+  rows : Int32
+  columns : Int32
+  north : Double
+  west : Double
+  latitude_spacing : Double
+  longitude_spacing : Double
+  // private fields
+}
+pub fn Raster::ascii_grid(Self, missing_value? : Double) -> String raise GribError
+pub fn Raster::latitude(Self, Int32) -> Double
+pub fn Raster::longitude(Self, Int32) -> Double
+pub fn Raster::pgm(Self) -> String
+pub fn Raster::value(Self, Int32, Int32) -> Double? raise GribError
+
+pub(all) struct ReadWindow {
+  samples : Array[Sample]
+  payload_reads : Int32
+  payload_bytes : Int64
+  decoded_values : Int32
+}
+pub fn ReadWindow::metrics_json(Self) -> @json.Json
 
 pub(all) struct ReferenceTime {
   year : Int32
@@ -126,6 +265,30 @@ pub(all) struct ReferenceTime {
 }
 pub fn ReferenceTime::iso(Self) -> String
 
+pub(all) struct RegionalSeriesPoint {
+  field_index : Int32
+  time : ForecastTime
+  statistics : Statistics
+}
+pub fn RegionalSeriesPoint::json(Self) -> @json.Json
+
+pub(all) struct RegularGridSpec {
+  columns : Int32
+  rows : Int32
+  latitude_microdegrees : Int32
+  longitude_microdegrees : Int32
+  i_increment_microdegrees : Int32
+  j_increment_microdegrees : Int32
+}
+
+pub(all) struct ResamplingResult {
+  raster : Raster
+  present : Int32
+  missing : Int32
+  outside_or_unsampled : Int32
+}
+pub fn ResamplingResult::metrics_json(Self) -> @json.Json
+
 pub(all) struct Sample {
   row : Int32
   column : Int32
@@ -135,10 +298,34 @@ pub(all) struct Sample {
 }
 pub fn Sample::json(Self) -> @json.Json
 
+pub(all) struct SeriesOptions {
+  interpolation : InterpolationMethod
+  missing : MissingPolicy
+  max_fields : Int32
+}
+pub fn SeriesOptions::standard() -> Self
+
+pub(all) struct SeriesPoint {
+  field_index : Int32
+  time : ForecastTime
+  location : EstimatedValue
+}
+pub fn SeriesPoint::json(Self) -> @json.Json
+
 pub(all) struct Span {
   offset : Int32
   length : Int32
 }
+
+pub(all) struct StatisticalRange {
+  process : Int32
+  increment_type : Int32
+  range_unit : Int32
+  range_length : UInt64?
+  increment_unit : Int32
+  increment : UInt64?
+}
+pub fn StatisticalRange::json(Self) -> @json.Json
 
 pub(all) struct Statistics {
   points : Int32
@@ -156,11 +343,33 @@ pub(all) struct Surface {
   value : Double?
 }
 
+pub(all) struct TargetGrid {
+  rows : Int32
+  columns : Int32
+  north : Double
+  west : Double
+  latitude_spacing : Double
+  longitude_spacing : Double
+}
+
 pub(all) struct Variable {
   discipline : Int32
   category : Int32
   parameter : Int32
 }
+
+pub(all) struct WindowDifference {
+  evaluated : Int32
+  paired : Int32
+  both_missing : Int32
+  left_only : Int32
+  right_only : Int32
+  above_tolerance : Int32
+  mean_delta : Double?
+  mean_absolute_error : Double?
+  maximum_absolute_error : Double?
+}
+pub fn WindowDifference::json(Self) -> @json.Json
 
 // Type aliases
 
