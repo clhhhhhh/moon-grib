@@ -129,21 +129,23 @@ fn read_message(
   let mut reusable_bitmap : Span? = None
   let initial_count = fields.length()
   while cursor < end {
-    if end - cursor >= 5 && byte_at(source.read_exact(cursor + 4, 1), 0) == 2 {
-      let (local_section, _) = read_section(source, cursor, end, 2, 5)
-      cursor += local_section.length
+    let mut header = section_header(source, cursor, end)
+    if byte_at(header, 4) == 2 {
+      let section = checked_section(header, cursor, end, 2, 5)
+      cursor += section.length
+      header = section_header(source, cursor, end)
     }
-    if end - cursor >= 5 && byte_at(source.read_exact(cursor + 4, 1), 0) == 3 {
-      let (section, _) = read_section(source, cursor, end, 3, 14)
+    if byte_at(header, 4) == 3 {
+      let section = checked_section(header, cursor, end, 3, 14)
       grid = Some(section)
       cursor += section.length
+      header = section_header(source, cursor, end)
     }
     guard grid is Some(grid_definition) else {
       raise Invalid(cursor, "field has no grid definition")
     }
-    let (product_definition, after_product) = read_section(
-      source, cursor, end, 4, 9,
-    )
+    let product_definition = checked_section(header, cursor, end, 4, 9)
+    let after_product = cursor + product_definition.length
     let (representation, after_representation) = read_section(
       source, after_product, end, 5, 11,
     )
@@ -191,10 +193,36 @@ fn read_section(
   expected : Int32,
   minimum : Int32,
 ) -> (Span, Int32) raise GribError {
+  let span = checked_section(
+    section_header(source, cursor, end),
+    cursor,
+    end,
+    expected,
+    minimum,
+  )
+  (span, cursor + span.length)
+}
+
+///|
+fn section_header(
+  source : ByteSource,
+  cursor : Int32,
+  end : Int32,
+) -> Bytes raise GribError {
   if end - cursor < 5 {
     raise Invalid(cursor, "truncated section header")
   }
-  let header = source.read_exact(cursor, 5)
+  source.read_exact(cursor, 5)
+}
+
+///|
+fn checked_section(
+  header : Bytes,
+  cursor : Int32,
+  end : Int32,
+  expected : Int32,
+  minimum : Int32,
+) -> Span raise GribError {
   let length = bounded_int(unsigned(header, 0, 4), cursor)
   if length < minimum || length > end - cursor {
     raise Invalid(cursor, "invalid section length")
@@ -202,5 +230,5 @@ fn read_section(
   if byte_at(header, 4) != expected {
     raise Invalid(cursor + 4, "expected section " + expected.to_string())
   }
-  ({ offset: cursor, length, }, cursor + length)
+  { offset: cursor, length, }
 }
