@@ -1,0 +1,11 @@
+import {
+  "moon-grib/moon-grib" @grib,
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "js"
+
+options(
+  link: { "js": { "format": "cjs" } },
+)
