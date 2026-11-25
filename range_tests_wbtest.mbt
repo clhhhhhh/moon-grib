@@ -162,3 +162,42 @@ test "range planning preserves logical order across scanning modes" {
     )
   }
 }
+
+///|
+test "shared grid and bitmap references remain scoped to one message" {
+  let bytes = fixture(0, true)
+  let original = open_archive(bytes).field(0)
+  let extra_product = bytes[original.product_definition.offset:original.bitmap.offset].to_owned()
+  let reused_bitmap = b"\x00\x00\x00\x06\x06\xfe"
+  let extra_data = bytes[original.data.offset:original.data.offset +
+  original.data.length].to_owned()
+  let prefix = bytes[:bytes.length() - 4].to_owned()
+  let payload = prefix + extra_product + reused_bitmap + extra_data + b"7777"
+  let assembled : Array[Byte] = []
+  for octet in payload {
+    assembled.push(octet)
+  }
+  put(assembled, 8, 8, assembled.length().to_uint64())
+  let message = Bytes::from_array(assembled[:])
+  let archive = open_archive(message + bytes)
+  assert_eq(archive.field_count(), 3)
+  assert_eq(
+    archive.field(1).bitmap_source.map(span => span.offset),
+    Some(original.bitmap.offset),
+  )
+  let source = ByteSource::new(message.length(), (start, length) => {
+    message[start:start + length].to_owned()
+  })
+  let bounds : Bounds = {
+    west: -180.0,
+    east: 180.0,
+    south: -90.0,
+    north: 90.0,
+  }
+  let first = archive.decode(0).window(bounds)
+  assert_eq(samples_csv(first), samples_csv(archive.decode(1).window(bounds)))
+  assert_eq(
+    samples_csv(first),
+    samples_csv(open_indexed(source).decode(1).window(bounds).samples),
+  )
+}
