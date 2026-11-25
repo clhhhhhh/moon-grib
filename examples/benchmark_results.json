@@ -6,6 +6,7 @@
       102,
       39
     ],
+    "packing": "grid_simple",
     "selected_points": 121,
     "file_bytes": 11522864,
     "full_scan_points": 360000,
@@ -17,13 +18,13 @@
         "decoded_values": 121,
         "missing_points": 0
       },
-      "source_reads": 190,
-      "source_bytes": 1184
+      "source_reads": 158,
+      "source_bytes": 1152
     },
     "median_cli_wall_ms": {
-      "scan-window": 181.74,
-      "window": 109.75,
-      "range-window": 108.82
+      "scan-window": 191.16,
+      "window": 113.66,
+      "range-window": 112.43
     }
   },
   {
@@ -33,6 +34,7 @@
       123,
       36
     ],
+    "packing": "grid_simple",
     "selected_points": 40401,
     "file_bytes": 11522864,
     "full_scan_points": 360000,
@@ -44,13 +46,30 @@
         "decoded_values": 40401,
         "missing_points": 0
       },
-      "source_reads": 380,
-      "source_bytes": 81744
+      "source_reads": 348,
+      "source_bytes": 81712
     },
     "median_cli_wall_ms": {
-      "scan-window": 220.23,
-      "window": 174.01,
-      "range-window": 214.42
+      "scan-window": 238.3,
+      "window": 182.57,
+      "range-window": 202.6
+    }
+  },
+  {
+    "bounds": [
+      103,
+      16,
+      123,
+      36
+    ],
+    "packing": "grid_complex_spatial_differencing",
+    "selected_points": 40401,
+    "file_bytes": 41424,
+    "full_scan_points": 360000,
+    "range_window": null,
+    "median_cli_wall_ms": {
+      "scan-window": 235.0,
+      "window": 195.75
     }
   }
 ]
