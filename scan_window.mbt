@@ -11,12 +11,13 @@ pub fn DecodedField::scan_window(
   if self.grid.points > scan_limit {
     raise Unsupported(self.payload, "full-grid scan exceeds scan limit")
   }
+  let cursor = self.difference.map(_ => difference_cursor())
   let result : Array[Sample] = []
   for row in 0..<self.grid.rows {
     let row_selected = row >= rows.start && row < rows.end
     let mut interval = 0
     for column in 0..<self.grid.columns {
-      let sample = self.at(row, column)
+      let sample = self.at_cursor(row, column, cursor)
       if !row_selected {
         continue
       }

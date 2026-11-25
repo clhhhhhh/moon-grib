@@ -96,6 +96,16 @@ pub fn DecodedField::at(
     column >= self.grid.columns {
     raise Invalid(self.payload, "grid index out of bounds")
   }
+  self.at_cursor(row, column, None)
+}
+
+///|
+fn DecodedField::at_cursor(
+  self : DecodedField,
+  row : Int32,
+  column : Int32,
+  cursor : DifferenceCursor?,
+) -> Sample raise GribError {
   let scan = self.grid.scan_index(row, column)
   let ordinal = match self.bitmap {
     Some(bitmap) => bitmap.ordinal(self.bytes, scan)
@@ -119,7 +129,16 @@ pub fn DecodedField::at(
         Some(groups) =>
           match self.difference {
             Some(index_data) =>
-              index_data.value(groups, self.bytes, self.payload, index)
+              index_data.value(
+                groups,
+                self.bytes,
+                self.payload,
+                index,
+                match cursor {
+                  Some(state) => state
+                  None => difference_cursor()
+                },
+              )
             None => groups.value(self.bytes, self.payload, index)
           }
       }
@@ -171,10 +190,11 @@ pub fn DecodedField::visit_window(
   max_points~ : Int32 = 1000000,
 ) -> Unit raise GribError {
   let (rows, columns) = window_ranges(self.grid, bounds, max_points)
+  let cursor = self.difference.map(_ => difference_cursor())
   for row in rows.start..<rows.end {
     for interval in columns {
       for column in interval.start..<interval.end {
-        emit(self.at(row, column))
+        emit(self.at_cursor(row, column, cursor))
       }
     }
   }

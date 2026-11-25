@@ -109,25 +109,45 @@ fn build_difference_index(
 }
 
 ///|
+priv struct DifferenceCursor {
+  mut index : Int32
+  mut state : DifferenceState
+}
+
+///|
+fn difference_cursor() -> DifferenceCursor {
+  { index: -1, state: { initialized: 0, previous: 0L, before_previous: 0L, }, }
+}
+
+///|
 fn DifferenceIndex::value(
   self : DifferenceIndex,
   grouped : GroupedPacking,
   bytes : Bytes,
   payload : Int32,
   index : Int32,
+  cursor : DifferenceCursor,
 ) -> UInt64? raise GribError {
   let block = index / 256
+  let mut start = block * 256
   let mut state = self.checkpoints[block]
-  for i in (block * 256)..<(index + 1) {
+  if cursor.index >= start && cursor.index < index {
+    start = cursor.index + 1
+    state = cursor.state
+  }
+  let mut output : UInt64? = None
+  for i in start..<(index + 1) {
     match grouped.value(bytes, payload, i) {
       Some(code) => {
         state = self.spec.advance(state, code, payload)
         if i == index {
-          return Some(state.previous.reinterpret_as_uint64())
+          output = Some(state.previous.reinterpret_as_uint64())
         }
       }
-      None => if i == index { return None }
+      None => ()
     }
   }
-  None
+  cursor.index = index
+  cursor.state = state
+  output
 }
