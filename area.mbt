@@ -54,13 +54,14 @@ pub fn DecodedField::area_statistics(
   let mut footprint = 0.0
   let mut covered = 0.0
   let mut mean = 0.0
+  let cursor = self.difference.map(_ => difference_cursor())
   for row in rows.start..<rows.end {
     let weight = self.grid.row_area(row)
     for span in columns {
       for column in span.start..<span.end {
         points += 1
         footprint += weight
-        if self.at(row, column).value is Some(value) {
+        if self.at_cursor(row, column, cursor).value is Some(value) {
           present += 1
           covered += weight
           if covered > 0.0 {

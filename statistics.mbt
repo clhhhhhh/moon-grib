@@ -35,7 +35,13 @@ fn Moment::add(self : Moment, sample : Sample) -> Unit {
         self.maximum = value
       }
       let delta = value - self.mean
-      self.mean += delta / (self.present + 1).to_double()
+      let count = (self.present + 1).to_double()
+      self.mean = if delta.is_inf() {
+        // Opposite-sign finite extrema can overflow the subtraction.
+        self.mean * (self.present.to_double() / count) + value / count
+      } else {
+        self.mean + delta / count
+      }
       self.squared += delta * (value - self.mean)
     }
     self.present += 1

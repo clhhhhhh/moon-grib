@@ -46,6 +46,7 @@ pub fn Archive::decode(
     (parse_packing(self.bytes, field), 0)
   }
   let payload = field.data.offset + 5
+  let bitmap = parse_bitmap(self.bytes, field, grid.points, packing.count)
   let (grouped, difference) = match template {
     2 => (Some(parse_groups(self.bytes, field, packing, 0)), None)
     3 => {
@@ -66,7 +67,6 @@ pub fn Archive::decode(
     }
     _ => (None, None)
   }
-  let bitmap = parse_bitmap(self.bytes, field, grid.points, packing.count)
   {
     bytes: self.bytes,
     grid,
@@ -212,6 +212,9 @@ fn window_ranges(
   }
   let columns = longitude_ranges(grid, bounds)
   let rows = latitude_range(grid, bounds)
+  if columns.is_empty() {
+    return ({ start: rows.start, end: rows.start, }, columns)
+  }
   let mut width = 0
   for interval in columns {
     width += interval.end - interval.start

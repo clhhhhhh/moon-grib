@@ -5,7 +5,7 @@
 - 项目名称：MoonGRIB，基于 MoonBit 的 GRIB2 格点数据读取与窗口查询库
 - 参赛者：clhhhhhh
 - GitHub 仓库：[clhhhhhh/moon-grib](https://github.com/clhhhhhh/moon-grib)
-- Mooncakes 包：[clhhhhhh/moon-grib@0.1.0](https://mooncakes.io/docs/clhhhhhh/moon-grib)
+- Mooncakes 包：[clhhhhhh/moon-grib@0.1.1](https://mooncakes.io/docs/clhhhhhh/moon-grib)
 - 项目方向：气象与地理数据处理，以 MoonBit 独立实现，参考 WMO GRIB2 标准
 
 ## 项目简介

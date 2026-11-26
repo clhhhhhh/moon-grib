@@ -164,6 +164,33 @@ test "range planning preserves logical order across scanning modes" {
 }
 
 ///|
+test "a longitude miss collapses the row loop even when all latitudes match" {
+  let field = open_archive(fixture(0, false)).decode(0)
+  let bounds = { west: 20.0, east: 30.0, south: -90.0, north: 90.0, }
+  let (rows, columns) = window_ranges(field.grid, bounds, 0)
+  assert_eq(rows.start, rows.end)
+  assert_true(columns.is_empty())
+  assert_true(field.window(bounds, max_points=0).is_empty())
+}
+
+///|
+test "opposite IEEE extrema have a finite mean even when variance overflows" {
+  let (grid, product) = writer_specs()
+  let bytes = encode_ieee(grid, product, [
+    Some(-1.7e308),
+    Some(1.7e308),
+    None,
+    None,
+  ])
+  let stats = open_archive(bytes)
+    .decode(0)
+    .statistics({ west: -180.0, east: 180.0, south: -90.0, north: 90.0, })
+  assert_eq(stats.present, 2)
+  assert_eq(stats.mean, Some(0.0))
+  assert_eq(stats.population_variance, None)
+}
+
+///|
 test "shared grid and bitmap references remain scoped to one message" {
   let bytes = fixture(0, true)
   let original = open_archive(bytes).field(0)

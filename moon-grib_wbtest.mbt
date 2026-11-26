@@ -119,3 +119,24 @@ test "malformed framing and geographic limits fail explicitly" {
   }
   assert_true(limited)
 }
+
+///|
+test "grid and packed count are validated before spatial differencing" {
+  let fixture_bytes = fixture(0, false)
+  let field = open_archive(fixture_bytes).field(0)
+  let bytes : Array[Byte] = []
+  for octet in fixture_bytes {
+    bytes.push(octet)
+  }
+  put(bytes, field.representation.offset + 5, 4, 20000000UL)
+  put(bytes, field.representation.offset + 9, 2, 3UL)
+  let archive = open_archive(Bytes::from_array(bytes[:]))
+  let rejected = try {
+    ignore(archive.decode(0))
+    false
+  } catch {
+    Invalid(offset, _) => offset == field.bitmap.offset
+    _ => false
+  }
+  assert_true(rejected)
+}
