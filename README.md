@@ -19,6 +19,8 @@ moon run cmd/main --target js -- raster sample.grib2 0 119.5 29.7 120.6 30.7 asc
 
 ## 功能和格式范围
 
+最终交付目标是完整符合 WMO-No. 306 FM 92 GRIB Edition 2。下表记录当前实现；模板覆盖、补齐顺序及验收证据见 [GRIB2 合规计划](GRIB2-CONFORMANCE.md)。
+
 | 能力 | 入口或范围 |
 | --- | --- |
 | 文件和消息 | `open_archive` 从内存打开，`open_indexed` 按需读取。支持连续消息、消息内多字段、可选本地节和先前位图引用 |
@@ -38,6 +40,7 @@ Python 对照脚本使用 ECMWF ecCodes 和 NumPy。
 ```sh
 moon build --target js
 python examples/verify_eccodes.py
+python examples/verify_eccodes.py --same-field
 python -B examples/benchmark_window.py
 ```
 

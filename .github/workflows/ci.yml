@@ -26,6 +26,7 @@ jobs:
       - run: moon build --target js
       - run: python -m pip install eccodes==2.50.1
       - run: python examples/verify_eccodes.py
+      - run: python examples/verify_eccodes.py --same-field
       - run: python examples/verify_encoded.py
       - run: python -B examples/demo.py forecast-demo
       - run: python -B examples/compare_range_versions.py --runs 1
