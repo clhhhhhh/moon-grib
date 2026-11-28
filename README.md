@@ -25,7 +25,7 @@ moon run cmd/main --target js -- raster sample.grib2 0 119.5 29.7 120.6 30.7 asc
 | --- | --- |
 | 文件和消息 | `open_archive` 从内存打开，`open_indexed` 按需读取。支持连续消息、消息内多字段、可选本地节和先前位图引用 |
 | 网格 | 规则经纬网格 3.0、规则高斯网格 3.40，支持正反方向、行列优先、交替扫描和缺测位图。缩减网格和交错网格超出当前范围 |
-| 内存读取 | 简单打包 5.0、通用组拆分 5.2、一阶及二阶空间差分 5.3，以及单精度或双精度 IEEE 5.4 |
+| 内存读取 | 简单打包 5.0、通用组拆分 5.2、一阶及二阶空间差分 5.3、单精度或双精度 IEEE 5.4，以及带代表值的游程打包 5.200 |
 | 读取文件范围 | `range-window` 按需读取 5.0 和 5.4 的偏移区间，`range-inventory` 仅读取消息结构和元数据 |
 | 查询和比较 | `point`、`stats`、`estimate`、`profile`、`compare`。支持最近邻、双线性插值和缺测策略 |
 | 时间轴 | 支持瞬时产品的有效时刻、点位和区域时间序列，`interval` 展示模板 4.8 的区间与统计描述 |
@@ -41,6 +41,7 @@ Python 对照脚本使用 ECMWF ecCodes 和 NumPy。
 moon build --target js
 python examples/verify_eccodes.py
 python examples/verify_eccodes.py --same-field
+python examples/verify_level_runs.py
 python -B examples/benchmark_window.py
 ```
 

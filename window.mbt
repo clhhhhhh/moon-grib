@@ -23,6 +23,7 @@ pub struct DecodedField {
   priv packing : Packing
   priv grouped : GroupedPacking?
   priv difference : DifferenceIndex?
+  priv level_runs : Array[LevelRun]?
   priv ieee_width : Int32
   payload : Int32
 }
@@ -42,6 +43,17 @@ pub fn Archive::decode(
       field.data.length,
     )
     (ieee_packing(width, count), width)
+  } else if template == 200 {
+    (
+      ieee_packing(
+        0,
+        bounded_int(
+          unsigned(self.bytes, field.representation.offset + 5, 4),
+          field.representation.offset + 5,
+        ),
+      ),
+      0,
+    )
   } else {
     (parse_packing(self.bytes, field), 0)
   }
@@ -74,6 +86,11 @@ pub fn Archive::decode(
     packing,
     grouped,
     difference,
+    level_runs: if template == 200 {
+      Some(parse_level_runs(self.bytes, field, packing.count))
+    } else {
+      None
+    },
     ieee_width,
     payload,
   }
@@ -120,6 +137,7 @@ fn DecodedField::at_cursor(
           self.ieee_width,
         ),
       )
+    Some(index) if self.level_runs is Some(runs) => level_run_value(runs, index)
     Some(index) => {
       let integer = match self.grouped {
         None =>
