@@ -26,7 +26,8 @@ def main():
     fixture.write_bytes(subprocess.check_output(["node", str(ENCODER)]))
     inventory = run("range-inventory", fixture)
     records = [json.loads(line) for line in inventory.splitlines()]
-    assert len(records) == 2 and records[0]["parameter"] == 0
+    assert [row["packing_template"] for row in records] == [0, 4, 200]
+    assert all(row["parameter"] == 0 for row in records)
     (args.output / "inventory.jsonl").write_bytes(inventory)
 
     bounds = (100, 39, 102, 40)
