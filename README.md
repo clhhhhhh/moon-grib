@@ -64,7 +64,7 @@ python -B examples/demo.py ./forecast-demo
 python -B examples/verify_encoded.py
 ```
 
-The demo generates two GRIB2 fields for the same forecast, lists the fields,
+The demo generates three GRIB2 fields for the same forecast, lists the fields,
 extracts a 3-by-2 region and writes a grayscale PGM preview. It checks the
 inventory, the missing cell and the image dimensions. The output directory
 also includes a CSV file and the input GRIB2. The separate ecCodes
