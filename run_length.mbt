@@ -99,3 +99,83 @@ fn level_run_value(runs : Array[LevelRun], index : Int32) -> Double? {
   }
   runs[low].value
 }
+
+///|
+/// Encode an eight-bit GRIB2 template 5.200 field. Level indexes start at
+/// one, None denotes missing, and representatives are scaled by 10^-scale.
+pub fn encode_level_runs(
+  grid : RegularGridSpec,
+  product : ProductSpec,
+  scale : Int32,
+  representatives : Array[UInt32],
+  values : Array[Int32?],
+) -> Bytes raise GribError {
+  validate_grid_spec(grid, values.length())
+  validate_product(product)
+  if scale < -127 ||
+    scale > 127 ||
+    representatives.is_empty() ||
+    representatives.length() > 253 {
+    raise Invalid(
+      0, "5.200 encoding requires 1 through 253 levels and a scale of -127 through 127",
+    )
+  }
+  for i, representative in representatives {
+    if representative > 65535U {
+      raise Invalid(i, "representative level exceeds 16 bits")
+    }
+  }
+  let mut maximum = 0
+  for i, candidate in values {
+    if candidate is Some(level) {
+      if level < 1 || level > representatives.length() {
+        raise Invalid(i, "unknown representative level index")
+      }
+      if level > maximum {
+        maximum = level
+      }
+    }
+  }
+  let data : BinaryWriter = { bytes: [], }
+  if maximum > 0 {
+    let base = 255 - maximum
+    let mut start = 0
+    while start < values.length() {
+      let value = values[start]
+      let mut end = start + 1
+      while end < values.length() && values[end] == value {
+        end += 1
+      }
+      data.octet(value.unwrap_or(0))
+      let mut repeats = end - start - 1
+      while repeats > 0 {
+        data.octet(maximum + 1 + repeats % base)
+        repeats = repeats / base
+      }
+      start = end
+    }
+  }
+  let bitmap : Presence = {
+    points: values.length(),
+    present: values.length(),
+    mask: [],
+  }
+  let definition_size = 17 + 2 * representatives.length()
+  let data_size = 5 + data.bytes.length()
+  let writer = message_writer(grid, product, bitmap, definition_size, data_size)
+  writer.section(5, definition_size)
+  writer.integer(bitmap.present.to_uint64(), 4)
+  writer.integer(200UL, 2)
+  writer.octet(8)
+  writer.integer(maximum.to_uint64(), 2)
+  writer.integer(representatives.length().to_uint64(), 2)
+  writer.integer(signed_code(scale, 1), 1)
+  for representative in representatives {
+    writer.integer(representative.to_uint64(), 2)
+  }
+  writer.presence(bitmap)
+  writer.section(7, data_size)
+  writer.literal(Bytes::from_array(data.bytes[:]))
+  writer.literal(b"7777")
+  Bytes::from_array(writer.bytes[:])
+}

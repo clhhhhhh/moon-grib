@@ -14,7 +14,7 @@ def main():
     encoded = subprocess.check_output(["node", str(ENCODER)])
     start = 0
     results = []
-    for template in (0, 4):
+    for template in (0, 4, 200):
         length = int.from_bytes(encoded[start + 8:start + 16], "big")
         message = encoded[start:start + length]
         assert message.startswith(b"GRIB") and message.endswith(b"7777")
@@ -28,10 +28,15 @@ def main():
             for key, value in expected.items():
                 actual = eccodes.codes_get(gid, key)
                 assert actual == value, (key, actual, value)
-            mask = eccodes.codes_get_array(gid, "bitmap")
+            values = eccodes.codes_get_values(gid)
+            if template == 200:
+                mask = values != eccodes.codes_get(gid, "missingValue")
+                expected_values = [20, 30, 30, 30, 20]
+            else:
+                mask = eccodes.codes_get_array(gid, "bitmap")
+                expected_values = [275, 276, 277, 278, 279]
             np.testing.assert_array_equal(mask, [1, 0, 1, 1, 1, 1])
-            np.testing.assert_array_equal(eccodes.codes_get_values(gid)[mask != 0],
-                                          [275, 276, 277, 278, 279])
+            np.testing.assert_array_equal(values[mask != 0], expected_values)
             np.testing.assert_array_equal(eccodes.codes_get_array(gid, "latitudes"),
                                           [40, 40, 40, 39, 39, 39])
             np.testing.assert_array_equal(eccodes.codes_get_array(gid, "longitudes"),

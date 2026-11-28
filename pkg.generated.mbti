@@ -8,6 +8,8 @@ import {
 // Values
 pub fn encode_ieee(RegularGridSpec, ProductSpec, Array[Double?]) -> Bytes raise GribError
 
+pub fn encode_level_runs(RegularGridSpec, ProductSpec, Int32, Array[UInt32], Array[Int32?]) -> Bytes raise GribError
+
 pub fn encode_simple(RegularGridSpec, ProductSpec, IntegerPackingSpec, Array[UInt32?]) -> Bytes raise GribError
 
 pub fn open_archive(Bytes) -> Archive raise GribError

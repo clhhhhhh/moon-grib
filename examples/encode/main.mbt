@@ -43,5 +43,13 @@ fn main raise {
     Some(278.0),
     Some(279.0),
   ])
-  write_stdout(simple + ieee)
+  let levels = @grib.encode_level_runs(grid, product, -1, [2U, 3U], [
+    Some(1),
+    None,
+    Some(2),
+    Some(2),
+    Some(2),
+    Some(1),
+  ])
+  write_stdout(simple + ieee + levels)
 }

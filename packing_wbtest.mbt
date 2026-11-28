@@ -30,3 +30,26 @@ test "truly overflowing values still fail" {
   }
   assert_true(rejected)
 }
+
+///|
+test "level values round-trip including wholly missing fields" {
+  let (grid, product) = writer_specs()
+  let data = encode_level_runs(grid, product, 1, [15U, 40U], [
+    Some(1),
+    Some(1),
+    None,
+    Some(2),
+  ])
+  let decoded = open_archive(data).decode(0)
+  assert_eq(decoded.at(0, 0).value, Some(1.5))
+  assert_eq(decoded.at(0, 1).value, Some(1.5))
+  assert_eq(decoded.at(1, 0).value, None)
+  assert_eq(decoded.at(1, 1).value, Some(4.0))
+  let missing = encode_level_runs(grid, product, 0, [1U], [
+    None,
+    None,
+    None,
+    None,
+  ])
+  assert_eq(open_archive(missing).decode(0).at(1, 1).value, None)
+}

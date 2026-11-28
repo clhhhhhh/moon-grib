@@ -29,7 +29,7 @@ moon run cmd/main --target js -- raster sample.grib2 0 119.5 29.7 120.6 30.7 asc
 | 读取文件范围 | `range-window` 按需读取 5.0 和 5.4 的偏移区间，`range-inventory` 仅读取消息结构和元数据 |
 | 查询和比较 | `point`、`stats`、`estimate`、`profile`、`compare`。支持最近邻、双线性插值和缺测策略 |
 | 时间轴 | 支持瞬时产品的有效时刻、点位和区域时间序列，`interval` 展示模板 4.8 的区间与统计描述 |
-| 导出和编码 | 窗口 CSV、JSON Lines、ASCII Grid、PGM。MoonBit API 可编码规则经纬网格的简单整数打包或 IEEE64 |
+| 导出和编码 | 窗口 CSV、JSON Lines、ASCII Grid、PGM。MoonBit API 可编码规则经纬网格的简单整数打包、IEEE64 或 8 位代表值游程 |
 
 库入口 `open_indexed` 接受 `ByteSource` 回调，可以从本地文件或其他支持定位偏移的数据源读取。范围查询合并相邻字节段，位图存在时先构建缺测值索引。空间差分采用预处理与检查点恢复，适用于内存读取路径。CLI 支持的具体命令可直接运行 `moon run cmd/main --target js` 查看。
 
