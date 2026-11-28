@@ -23,9 +23,10 @@ pub fn Archive::validate(
       let field = self.decode(index)
       if decode_values {
         let (rows, columns) = field.dimensions()
+        let cursor = field.difference.map(_ => difference_cursor())
         for row in 0..<rows {
           for column in 0..<columns {
-            ignore(field.at(row, column))
+            ignore(field.at_cursor(row, column, cursor))
           }
         }
       }
